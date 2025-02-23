@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spin the Wheel of Names</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- htmx via CDN -->
+  <script src="https://unpkg.com/htmx.org@1.9.3"></script>
+  <!-- Canvas-Confetti for confetti animation -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+  <style>
+    /* Additional custom styles if needed */
+  </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center p-6">
+  <header class="w-full flex justify-evenly items-center mb-6">
+    <h1 class="text-3xl font-bold">Spin the Wheel of Names</h1>
+    <button id="muteBtn" class="px-3 py-1 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 focus:outline-none" aria-label="Mute sounds">Mute</button>
+  </header>
+
+  <!-- Name input and reset controls -->
+  <div class="w-full max-w-md mb-6">
+    <div class="flex space-x-2">
+      <input
+        id="nameInput"
+        type="text"
+        placeholder="Enter a unique name"
+        class="flex-1 px-3 py-2 border rounded focus:outline-none"
+      />
+      <button
+        id="addNameBtn"
+        class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+      >
+        Add Name
+      </button>
+      <button
+        id="resetBtn"
+        class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+      >
+        Reset
+      </button>
+    </div>
+    <p id="namesList" class="mt-2 text-sm text-gray-700">
+      No names added yet.
+    </p>
+  </div>
+
+  <!-- Wheel container -->
+  <div id="wheelContainer" class="relative mb-4">
+    <svg id="wheelSVG" width="300" height="300" viewBox="0 0 300 300">
+      <!-- Group to hold all slices and text; this group will be rotated on spin -->
+      <g id="wheelGroup"></g>
+      <!-- Fixed pointer arrow at the top -->
+      <polygon points="145,10 155,10 150,30" fill="red"></polygon>
+    </svg>
+  </div>
+
+  <!-- Spin & Mute Buttons Container -->
+  <div class="flex items-center space-x-4 mb-4">
+    <button
+      id="spinBtn"
+      class="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none"
+      aria-label="Spin the wheel"
+    >
+      Spin!
+    </button>
+  </div>
+
+  <!-- Result display -->
+  <div id="result" class="mt-2 text-xl font-medium"></div>
+
+  <!-- Social Sharing Section -->
+  <div id="shareSection" class="mt-4">
+    <p class="mb-2">Share your result:</p>
+    <div id="shareButtons" class="flex space-x-2">
+      <!-- X (formerly Twitter) button -->
+      <button id="shareX" class="flex items-center px-4 py-2 bg-blue-400 text-white rounded hover:bg-blue-600 focus:outline-none" aria-label="Share on X">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mr-1" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+        </svg>
+        X
+      </button>
+      <!-- Facebook button -->
+      <button id="shareFacebook" class="flex items-center px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800 focus:outline-none" aria-label="Share on Facebook">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mr-1" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M22,12A10,10,0,1,0,10.9,21.95V14.89H8.31V12h2.59V9.79c0-2.56,1.52-3.97,3.85-3.97a15.85,15.85,0,0,1,2.29.2V8.3H16.33c-1.29,0-1.54.61-1.54,1.5V12h2.62l-.42,2.89H14.79v7.06A10,10,0,0,0,22,12Z"/>
+        </svg>
+        Facebook
+      </button>
+      <!-- LinkedIn button -->
+      <button id="shareLinkedIn" class="flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700 focus:outline-none" aria-label="Share on LinkedIn">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mr-1" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M19 3A2 2 0 0 1 21 5V19A2 2 0 0 1 19 21H5A2 2 0 0 1 3 19V5A2 2 0 0 1 5 3H19M8.1 18V10.8H5.9V18H8.1M7 9.3A1.17 1.17 0 1 0 7 7A1.17 1.17 0 0 0 7 9.3M18.1 18V13.7C18.1 11.3 16.7 10.3 15.4 10.3A1.7 1.7 0 0 0 13.9 11.4V10.8H11.7C11.8 11.2 11.7 18 11.7 18H13.9V13.9C13.9 13.3 14 12.7 14.6 12.7C15.2 12.7 15.3 13.2 15.3 13.9V18H18.1Z"/>
+        </svg>
+        LinkedIn
+      </button>
+      <!-- Instagram button -->
+      <button id="shareInstagram" class="flex items-center px-4 py-2 bg-pink-500 text-white rounded hover:bg-pink-600 focus:outline-none" aria-label="Share on Instagram">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 mr-1" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M7.75,2h8.5A5.76,5.76,0,0,1,22,7.75v8.5A5.76,5.76,0,0,1,16.25,22h-8.5A5.76,5.76,0,0,1,2,16.25v-8.5A5.76,5.76,0,0,1,7.75,2M12,7.31A4.69,4.69,0,1,0,16.69,12,4.69,4.69,0,0,0,12,7.31M18.44,6.56a1.09,1.09,0,1,0,1.09,1.09A1.09,1.09,0,0,0,18.44,6.56Z"/>
+          <circle cx="12" cy="12" r="3.18"/>
+        </svg>
+        Instagram
+      </button>
+    </div>
+  </div>
+
+  <!-- Spin History / Leaderboard Section -->
+  <div id="spinHistorySection" class="mt-6 w-full max-w-md">
+    <h2 class="text-2xl font-semibold mb-2">Spin History</h2>
+    <ul id="spinHistoryList" class="bg-white shadow rounded p-4 space-y-2">
+      <!-- History items will be appended here -->
+    </ul>
+  </div>
+
+  <!-- Google Ads Placeholder -->
+  <div id="adPlaceholder" class="mt-10">
+    <!-- Insert your Google AdSense code here -->
+  </div>
+
+  <!-- Custom JavaScript -->
+  <script>
+    // Global variables
+    let names = [];
+    let spinHistory = [];
+    const maxNames = 10;
+    let muted = false;
+    let currentRotation = 0; // Track cumulative rotation
+    const spinDuration = 4000; // Spin duration in ms
+    let spinStartTime = 0; // Will be set when spin starts
+
+    // DOM elements
+    const nameInput = document.getElementById("nameInput");
+    const addNameBtn = document.getElementById("addNameBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const namesList = document.getElementById("namesList");
+    const wheelGroup = document.getElementById("wheelGroup");
+    const spinBtn = document.getElementById("spinBtn");
+    const resultDiv = document.getElementById("result");
+    const muteBtn = document.getElementById("muteBtn");
+    const spinHistoryList = document.getElementById("spinHistoryList");
+
+    // Set the transform origin for the wheelGroup to the center of the SVG
+    wheelGroup.style.transformOrigin = "150px 150px";
+
+    // Audio objects for sound effects (replace with your actual audio file URLs)
+    const tickSound = new Audio('soundfx/spintickfx.mp3');   // your tick sound file
+    const winnerSound = new Audio('soundfx/cheeringfx.mp3');  // your cheering sound file
+
+    // ---------------- Local Storage Functions ----------------
+    function loadLocalData() {
+      const storedNames = localStorage.getItem("names");
+      if (storedNames) {
+        names = JSON.parse(storedNames);
+      }
+      const storedHistory = localStorage.getItem("spinHistory");
+      if (storedHistory) {
+        spinHistory = JSON.parse(storedHistory);
+      }
+    }
+
+    function saveLocalData() {
+      localStorage.setItem("names", JSON.stringify(names));
+      localStorage.setItem("spinHistory", JSON.stringify(spinHistory));
+    }
+
+    // ---------------- Update UI Functions ----------------
+    function updateNamesList() {
+      namesList.textContent = names.length 
+        ? "Current names: " + names.join(", ")
+        : "No names added yet.";
+      saveLocalData();
+    }
+
+    function updateWheel() {
+      wheelGroup.innerHTML = "";
+      const numNames = names.length;
+      const centerX = 150, centerY = 150, radius = 140;
+      
+      if (numNames === 0) {
+        // Display a default colorful wheel with 8 segments when no names exist.
+        const defaultSegments = 8;
+        const sliceAngle = 360 / defaultSegments;
+        for (let i = 0; i < defaultSegments; i++) {
+          const startAngle = (sliceAngle * i - 90) * Math.PI / 180;
+          const endAngle = (sliceAngle * (i + 1) - 90) * Math.PI / 180;
+          const x1 = centerX + radius * Math.cos(startAngle);
+          const y1 = centerY + radius * Math.sin(startAngle);
+          const x2 = centerX + radius * Math.cos(endAngle);
+          const y2 = centerY + radius * Math.sin(endAngle);
+          const largeArc = sliceAngle > 180 ? 1 : 0;
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          const d = `M ${centerX},${centerY} L ${x1},${y1} A ${radius},${radius} 0 ${largeArc} 1 ${x2},${y2} Z`;
+          path.setAttribute("d", d);
+          const hue = i * (360 / defaultSegments);
+          path.setAttribute("fill", `hsl(${hue}, 80%, 60%)`);
+          path.setAttribute("stroke", "#fff");
+          path.setAttribute("stroke-width", "2");
+          wheelGroup.appendChild(path);
+        }
+        return;
+      }
+      
+      // Build the wheel based on user-added names.
+      const sliceAngle = 360 / numNames;
+      for (let i = 0; i < numNames; i++) {
+        const startAngle = (sliceAngle * i - 90) * Math.PI / 180;
+        const endAngle = (sliceAngle * (i + 1) - 90) * Math.PI / 180;
+        const x1 = centerX + radius * Math.cos(startAngle);
+        const y1 = centerY + radius * Math.sin(startAngle);
+        const x2 = centerX + radius * Math.cos(endAngle);
+        const y2 = centerY + radius * Math.sin(endAngle);
+        const largeArc = sliceAngle > 180 ? 1 : 0;
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        const d = `M ${centerX},${centerY} L ${x1},${y1} A ${radius},${radius} 0 ${largeArc} 1 ${x2},${y2} Z`;
+        path.setAttribute("d", d);
+        const fillColor = numNames === 1 
+          ? "hsl(200, 90%, 50%)" 
+          : `hsl(${i * (360 / numNames)}, 70%, 70%)`;
+        path.setAttribute("fill", fillColor);
+        path.setAttribute("stroke", "#fff");
+        path.setAttribute("stroke-width", "2");
+        wheelGroup.appendChild(path);
+  
+        // Add text label for the slice.
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        const midAngle = ((sliceAngle * i + sliceAngle / 2) - 90) * Math.PI / 180;
+        const textRadius = radius * 0.6;
+        const textX = centerX + textRadius * Math.cos(midAngle);
+        const textY = centerY + textRadius * Math.sin(midAngle);
+        text.setAttribute("x", textX);
+        text.setAttribute("y", textY);
+        text.setAttribute("fill", "#000");
+        text.setAttribute("font-size", "14");
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("alignment-baseline", "middle");
+        const rotation = (sliceAngle * i + sliceAngle / 2);
+        text.setAttribute("transform", `rotate(${rotation}, ${textX}, ${textY})`);
+        text.textContent = names[i];
+        wheelGroup.appendChild(text);
+      }
+    }
+    
+    function updateSpinHistoryUI() {
+      spinHistoryList.innerHTML = "";
+      if (spinHistory.length === 0) {
+        spinHistoryList.innerHTML = "<li class='text-gray-600'>No spins yet.</li>";
+        return;
+      }
+      // Display latest spins first.
+      spinHistory.slice().reverse().forEach(item => {
+        const li = document.createElement("li");
+        const date = new Date(item.timestamp);
+        li.className = "border-b pb-1";
+        li.textContent = `${item.winner} – ${date.toLocaleString()}`;
+        spinHistoryList.appendChild(li);
+      });
+      saveLocalData();
+    }
+    
+    // ---------------- Audio Functions ----------------
+    function fadeOutAudio(audio, duration) {
+      const startVolume = audio.volume;
+      const startTime = performance.now();
+      function updateVolume() {
+        const elapsed = performance.now() - startTime;
+        if (elapsed < duration) {
+          audio.volume = startVolume * (1 - elapsed / duration);
+          requestAnimationFrame(updateVolume);
+        } else {
+          audio.volume = 0;
+        }
+      }
+      updateVolume();
+    }
+    
+    // ---------------- Mute Toggle ----------------
+    muteBtn.addEventListener("click", function() {
+      muted = !muted;
+      muteBtn.textContent = muted ? "Unmute" : "Mute";
+    });
+    
+    // ---------------- Add Name ----------------
+    function addName() {
+      const newName = nameInput.value.trim();
+      if (newName && names.indexOf(newName) === -1) {
+        if (names.length < maxNames) {
+          names.push(newName);
+          updateNamesList();
+          updateWheel();
+          nameInput.value = "";
+        } else {
+          alert("Maximum number of names reached.");
+        }
+      } else {
+        alert("Please enter a unique name.");
+      }
+    }
+    addNameBtn.addEventListener("click", addName);
+    nameInput.addEventListener("keydown", function(event) {
+      if (event.key === "Enter") addName();
+    });
+    
+    // ---------------- Reset ----------------
+    resetBtn.addEventListener("click", function() {
+      names = [];
+      updateNamesList();
+      updateWheel();
+      resultDiv.textContent = "";
+      currentRotation = 0;
+      wheelGroup.style.transition = "none";
+      wheelGroup.style.transform = "rotate(0deg)";
+      // Optionally clear spin history as well:
+      // spinHistory = [];
+      // updateSpinHistoryUI();
+    });
+    
+    // ---------------- TICK SOUND LOOP ----------------
+    function tickLoop() {
+      const elapsed = performance.now() - spinStartTime;
+      if (elapsed < spinDuration) {
+        if (!muted) {
+          tickSound.currentTime = 0;
+          tickSound.play();
+        }
+        const nextDelay = 50 + 250 * (elapsed / spinDuration);
+        setTimeout(tickLoop, nextDelay);
+      }
+    }
+    
+    // ---------------- SPIN THE WHEEL ----------------
+    spinBtn.addEventListener("click", function() {
+      if (names.length === 0) {
+        alert("Please add at least one name to spin.");
+        return;
+      }
+      // Reset any previous transition so we start fresh.
+      wheelGroup.style.transition = "none";
+      const extraSpins = Math.floor(Math.random() * 3) + 3; // 3 to 5 full rotations
+      const randomDeg = Math.floor(Math.random() * 360);
+      const spinDeg = extraSpins * 360 + randomDeg;
+      currentRotation += spinDeg;
+      wheelGroup.style.transition = "transform 4s ease-out";
+      wheelGroup.style.transform = `rotate(${currentRotation}deg)`;
+      
+      spinStartTime = performance.now();
+      tickLoop();
+      
+      setTimeout(() => {
+        if (!muted) {
+          winnerSound.currentTime = 0;
+          winnerSound.volume = 1;
+          winnerSound.play();
+          fadeOutAudio(winnerSound, 3500);
+        }
+        const normalizedRotation = currentRotation % 360;
+        const winningAngle = (360 - normalizedRotation) % 360;
+        const sliceAngle = 360 / names.length;
+        const winningIndex = Math.floor(winningAngle / sliceAngle);
+        const winner = names[winningIndex];
+        resultDiv.textContent = "Winner: " + winner;
+        // Update spin history
+        spinHistory.push({ winner, timestamp: Date.now() });
+        updateSpinHistoryUI();
+        // Trigger confetti animation
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }, spinDuration);
+    });
+    
+    // ---------------- Social Sharing ----------------
+    document.getElementById("shareX").addEventListener("click", function() {
+      const shareText = resultDiv.textContent ? resultDiv.textContent : "I spun the wheel!";
+      const shareUrl = "https://x.com/intent/tweet?text=" + encodeURIComponent(shareText + " " + location.href);
+      window.open(shareUrl, "_blank");
+    });
+    
+    document.getElementById("shareFacebook").addEventListener("click", function() {
+      const fbUrl = "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(location.href);
+      window.open(fbUrl, "_blank");
+    });
+    
+    document.getElementById("shareLinkedIn").addEventListener("click", function() {
+      const liUrl = "https://www.linkedin.com/sharing/share-offsite/?url=" + encodeURIComponent(location.href);
+      window.open(liUrl, "_blank");
+    });
+    
+    document.getElementById("shareInstagram").addEventListener("click", function() {
+      // Instagram doesn't allow direct URL sharing. We'll open the homepage.
+      window.open("https://www.instagram.com", "_blank");
+    });
+    
+    // ---------------- Initial Load ----------------
+    loadLocalData();
+    updateNamesList();
+    updateWheel();
+    updateSpinHistoryUI();
+  </script>
+</body>
+</html>
